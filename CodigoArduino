@@ -1,0 +1,114 @@
+#include <Wire.h> //incluimos librería para RTC
+#include <RTClib.h>
+
+#include <Servo.h> //incluimos libreria para el servo
+#include <LiquidCrystal.h> // incluimos libreria para LCD
+
+/*Dependiendo del modelo RTC que tengamos utilizamos la siguiente
+instrucción, para indicar la variable del RTC*/
+
+RTC_DS1307 rtc; //RTC DS1307
+//RTC_DS3231 rtc; //RTCDS3231
+
+LiquidCrystal lcd(8, 10, 7, 6, 5, 4);
+
+Servo myservo; // servo 
+int pos = 60; // variable para posición de servo 
+int volumen; // variable para señal de potenciómetro
+int tiempo; // variable para señal de segundo potenciómetro
+int pot = A0; // potenciometro conectado al pin A0 
+int pot2= A1; // potenciometro conectado al pin A1
+
+ DateTime now;
+ byte hour, minute;
+ String h, m;
+
+int feedHour = 16; // hora para activar dispensador 
+int feedMin = 40; // Minuto para activar dispensador 
+boolean foodTime = true; // variable que utilizamos para controlar la activacion del dispensador
+
+void setup() {
+  Wire.begin();
+  rtc.begin(); //inicializando RTC
+  lcd.begin(16, 2);
+
+}
+
+void loop() {
+  now = rtc.now();
+  printTime(now);
+
+  if ((feedHour == now.hour()) && (feedMin == now.minute()) && foodTime) {
+  feed(); // rutina para activar dispensador
+  }
+  /*Usamos 'foodTime' para que la comida no se sirva dos veces si la rutina de
+  alimentación finaliza en menos de un minuto. **/
+  if (feedMin != now.minute() ) {
+   foodTime = true;
+  }
+}
+void feed(){
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Sirviendo comida");
+
+  myservo.attach(9); //Conectamos servo
+ volumen = analogRead(pot/A1);
+ tiempo = analogRead(pot2/A0);
+
+ for (pos = 60; pos <= volumen; pos +=1) { // el servo se mueve de 0 a 180 
+ myservo.write(pos);
+ delay(tiempo);
+ }
+ delay(1000);
+
+ for (pos = volumen; pos >=60; pos-=1) { //El servo regresa de 180 a 0
+  myservo.write(pos);
+  delay(tiempo);
+ }
+ delay (3000);
+ myservo.detach(); //Desconectamos el servo
+ foodTime = false; //cambiamos la variable de foodtime
+}
+
+void printTime (DateTime t) {
+//Imprimir hora actual
+ lcd.setCursor(0, 0);
+ lcd.print("H. actual: ");
+ hour = t.hour();
+ if(hour < 10) {
+   h = "0" + String(hour);
+ } else {
+
+  h = String(hour);
+ }
+ lcd.print(h);
+ lcd.print(':');
+ minute = t.minute();
+ if (minute < 10){
+  m = "0" + String(minute);
+ } else {
+  m = String(minute);
+ }
+ lcd.print(m);
+
+ //Cuando se activa dispensador 
+lcd.setCursor(0, 1);
+lcd.print("H.comida ");
+if (feedHour < 10) {
+  h = "0" + String(feedHour);
+} else {
+  h = String(feedHour);
+}
+lcd.print(h);
+lcd.print(":");
+if(feedMin < 10 ) {
+  m = "0" + String(feedMin);
+} else {
+  m = String(feedMin);
+}
+
+lcd.print(m);
+
+return;
+}
